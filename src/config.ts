@@ -64,7 +64,8 @@ function loadRawEnvironments(): void {
   rawFileEnvironments = [];
   if (existsSync(file)) {
     try {
-      const parsed = JSON.parse(readFileSync(file, "utf8")) as Environment[];
+      // Strip a UTF-8 BOM if present; editors and PowerShell add one and JSON.parse rejects it.
+      const parsed = JSON.parse(readFileSync(file, "utf8").replace(/^﻿/, "")) as Environment[];
       rawFileEnvironments = parsed.filter((e) => e.name && e.tenantId);
     } catch (err) {
       console.error(`[microsoft-admin-mcp] Could not parse ${file}:`, (err as Error).message);

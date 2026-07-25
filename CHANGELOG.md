@@ -3,6 +3,12 @@
 Alle noemenswaardige wijzigingen aan dit project worden hier bijgehouden.
 Het formaat volgt [Keep a Changelog](https://keepachangelog.com/) en het project gebruikt [semantische versienummers](https://semver.org/).
 
+## [0.4.1] - 2026-07-25
+
+### Opgelost
+- environments.json met een UTF-8 BOM (zoals PowerShell die schrijft) wordt nu correct gelezen; voorheen werd het bestand stilzwijgend genegeerd.
+- local-setup.ps1 schrijft environments.json en claude_desktop_config.json voortaan zonder BOM en ondersteunt Microsoft Store installaties (virtuele AppData-configlocatie).
+
 ## [0.4.0] - 2026-07-25
 
 ### Toegevoegd
