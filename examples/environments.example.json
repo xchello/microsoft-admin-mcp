@@ -1,0 +1,22 @@
+[
+  {
+    "name": "klant-x",
+    "tenantId": "00000000-0000-0000-0000-000000000001",
+    "clientId": "app-id-van-klant-x",
+    "clientSecret": "env:KLANTX_SECRET",
+    "authMode": "app",
+    "description": "Klant X productie (app-only)"
+  },
+  {
+    "name": "klant-y",
+    "tenantId": "klanty.onmicrosoft.com",
+    "authMode": "devicecode",
+    "description": "Klant Y, delegated login met device code"
+  },
+  {
+    "name": "eigen-tenant",
+    "tenantId": "mijnbedrijf.onmicrosoft.com",
+    "authMode": "cli",
+    "description": "Eigen tenant via bestaande az login sessie"
+  }
+]

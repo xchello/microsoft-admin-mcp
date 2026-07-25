@@ -1,0 +1,45 @@
+{
+  "name": "microsoft-admin-mcp",
+  "version": "0.1.0",
+  "description": "MCP server for Microsoft Azure, Entra ID, Intune and PowerShell automation. Read plus confirmed-write operations via Microsoft Graph and Azure Resource Manager.",
+  "type": "module",
+  "license": "MIT",
+  "author": "Xander Oortgiesen",
+  "keywords": [
+    "mcp",
+    "model-context-protocol",
+    "microsoft-graph",
+    "azure",
+    "entra",
+    "intune",
+    "powershell"
+  ],
+  "bin": {
+    "microsoft-admin-mcp": "dist/index.js"
+  },
+  "files": [
+    "dist",
+    "README.md",
+    "LICENSE"
+  ],
+  "engines": {
+    "node": ">=20"
+  },
+  "scripts": {
+    "build": "tsc",
+    "prepare": "npm run build",
+    "start": "node dist/index.js",
+    "watch": "tsc --watch"
+  },
+  "dependencies": {
+    "@azure/identity": "^4.5.0",
+    "@modelcontextprotocol/sdk": "^1.12.0",
+    "docx": "^9.0.0",
+    "exceljs": "^4.4.0",
+    "zod": "^3.24.0"
+  },
+  "devDependencies": {
+    "@types/node": "^22.10.0",
+    "typescript": "^5.7.0"
+  }
+}
