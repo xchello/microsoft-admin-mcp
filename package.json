@@ -1,6 +1,6 @@
 {
   "name": "microsoft-admin-mcp",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "description": "MCP server for Microsoft Azure, Entra ID, Intune and PowerShell automation. Read plus confirmed-write operations via Microsoft Graph and Azure Resource Manager.",
   "type": "module",
   "license": "MIT",
@@ -19,6 +19,7 @@
   },
   "files": [
     "dist",
+    "knowledge",
     "README.md",
     "LICENSE"
   ],

@@ -1,11 +1,11 @@
-import { mkdirSync, writeFileSync, existsSync } from "node:fs";
-import { spawnSync } from "node:child_process";
+import { mkdirSync, writeFileSync } from "node:fs";
 import { homedir, tmpdir } from "node:os";
 import { join, resolve, extname } from "node:path";
 import { z } from "zod";
 import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { errorResult, jsonResult } from "../http.js";
 import { getActiveEnvironment } from "../auth.js";
+import { htmlToPdf } from "../render.js";
 
 type Row = Record<string, unknown>;
 interface Column {
@@ -87,41 +87,6 @@ ${body}
   </tbody></table></div>
   <footer>Gegenereerd door microsoft-admin-mcp op ${now} voor omgeving "${env.name}" (tenant ${env.tenantId}).</footer>
 </body></html>`;
-}
-
-// ---------- PDF via headless Edge/Chrome ----------
-function findBrowser(): string | undefined {
-  const candidates =
-    process.platform === "win32"
-      ? [
-          "C:\\Program Files (x86)\\Microsoft\\Edge\\Application\\msedge.exe",
-          "C:\\Program Files\\Microsoft\\Edge\\Application\\msedge.exe",
-          "C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe",
-        ]
-      : process.platform === "darwin"
-        ? [
-            "/Applications/Microsoft Edge.app/Contents/MacOS/Microsoft Edge",
-            "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome",
-          ]
-        : ["/usr/bin/microsoft-edge", "/usr/bin/google-chrome", "/usr/bin/chromium", "/usr/bin/chromium-browser"];
-  return candidates.find((c) => existsSync(c));
-}
-
-function htmlToPdf(htmlPath: string, pdfPath: string): void {
-  const browser = findBrowser();
-  if (!browser) {
-    throw new Error(
-      "No Edge/Chrome found for PDF generation. Use format 'html' instead, or install Microsoft Edge/Google Chrome."
-    );
-  }
-  const res = spawnSync(
-    browser,
-    ["--headless", "--disable-gpu", `--print-to-pdf=${pdfPath}`, "--no-pdf-header-footer", htmlPath],
-    { timeout: 60_000 }
-  );
-  if (res.status !== 0 || !existsSync(pdfPath)) {
-    throw new Error(`PDF generation failed: ${res.stderr?.toString().slice(0, 500)}`);
-  }
 }
 
 // ---------- XLSX ----------

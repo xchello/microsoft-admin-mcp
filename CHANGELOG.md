@@ -3,6 +3,13 @@
 Alle noemenswaardige wijzigingen aan dit project worden hier bijgehouden.
 Het formaat volgt [Keep a Changelog](https://keepachangelog.com/) en het project gebruikt [semantische versienummers](https://semver.org/).
 
+## [0.2.0] - 2026-07-25
+
+### Toegevoegd
+- `export_visualization`: grafisch verzorgde infographics (panelen, icoonkaarten, flow-pijlen, banner) en Mermaid-diagrammen naar html, png en pdf via headless Edge/Chrome.
+- `intune_troubleshooting_guide`: meegeleverde vier-tier Intune troubleshooting methodiek (gebaseerd op powerstacks-corp/intune-advanced-troubleshooting) met forensische collector-scripts en uitgewerkte voorbeelden.
+- Gedeelde rendermodule (`src/render.ts`) voor pdf en png, met BROWSER_PATH override.
+
 ## [0.1.0] - 2026-07-25
 
 ### Toegevoegd

@@ -13,6 +13,8 @@ import { registerPowerShellTools } from "./tools/powershell.js";
 import { registerDocsTools } from "./tools/docs.js";
 import { registerEnvironmentTools } from "./tools/environments.js";
 import { registerReportTools } from "./tools/report.js";
+import { registerVisualizeTools } from "./tools/visualize.js";
+import { registerKnowledgeTools } from "./tools/knowledge.js";
 
 const here = dirname(fileURLToPath(import.meta.url));
 const pkg = JSON.parse(readFileSync(join(here, "..", "package.json"), "utf8")) as {
@@ -33,11 +35,15 @@ Working principles:
 3. SAFETY. Read operations run directly. Every write (Graph/Azure non-GET, Intune actions,
    mutating PowerShell) requires explicit user approval and confirm:true. Destructive Intune
    actions additionally require expectedDeviceName. Respect READ_ONLY mode.
-4. REPORTS. For 'give me a report/overview as xlsx/pdf/csv/word', gather data with the read tools
-   and finish with export_report. Keep column labels human-friendly (Dutch when the user speaks Dutch).
+4. REPORTS AND VISUALS. For 'give me a report/overview as xlsx/pdf/csv/word', gather data with the
+   read tools and finish with export_report. Keep column labels human-friendly (Dutch when the user
+   speaks Dutch). For diagrams, architecture overviews and process flows use export_visualization
+   (infographic panels with icon cards and flow arrows, or Mermaid).
 5. POWERSHELL GENERATION. Scripts must follow modern standards: #Requires headers with pinned
    current versions, comment-based help, [CmdletBinding(SupportsShouldProcess)], Set-StrictMode,
    try/catch with -ErrorAction Stop, objects instead of Write-Host, least-privilege scopes.
+6. TROUBLESHOOTING. For Windows/Intune device problems (enrollment, sync, stuck apps, compliance
+   mismatches) read intune_troubleshooting_guide item 'method' first and follow its tiered approach.
 `.trim();
 
 const server = new McpServer(
@@ -84,6 +90,8 @@ registerIntuneTools(server);
 registerPowerShellTools(server);
 registerDocsTools(server);
 registerReportTools(server);
+registerVisualizeTools(server);
+registerKnowledgeTools(server);
 
 const transport = new StdioServerTransport();
 await server.connect(transport);
