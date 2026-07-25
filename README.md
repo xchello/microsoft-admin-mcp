@@ -26,7 +26,7 @@ Voeg toe aan je Claude Desktop configuratie (`%APPDATA%\Claude\claude_desktop_co
   "mcpServers": {
     "microsoft-admin": {
       "command": "npx",
-      "args": ["-y", "github:JOUW-GEBRUIKERSNAAM/microsoft-admin-mcp"],
+      "args": ["-y", "github:xchello/microsoft-admin-mcp"],
       "env": {
         "TENANT_ID": "jouw-tenant-id"
       }
@@ -38,13 +38,13 @@ Voeg toe aan je Claude Desktop configuratie (`%APPDATA%\Claude\claude_desktop_co
 Voor Claude Code:
 
 ```bash
-claude mcp add microsoft-admin -e TENANT_ID=jouw-tenant-id -- npx -y github:JOUW-GEBRUIKERSNAAM/microsoft-admin-mcp
+claude mcp add microsoft-admin -e TENANT_ID=jouw-tenant-id -- npx -y github:xchello/microsoft-admin-mcp
 ```
 
 ### Optie 2: lokaal clonen
 
 ```bash
-git clone https://github.com/JOUW-GEBRUIKERSNAAM/microsoft-admin-mcp.git
+git clone https://github.com/xchello/microsoft-admin-mcp.git
 cd microsoft-admin-mcp
 npm install
 ```
