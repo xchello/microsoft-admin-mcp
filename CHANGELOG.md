@@ -3,6 +3,14 @@
 Alle noemenswaardige wijzigingen aan dit project worden hier bijgehouden.
 Het formaat volgt [Keep a Changelog](https://keepachangelog.com/) en het project gebruikt [semantische versienummers](https://semver.org/).
 
+## [0.5.0] - 2026-07-25
+
+### Toegevoegd
+- Tenant-kennisbank: de server bouwt per tenant kennis op. `tenant_note_add` slaat een duurzaam feit op (bijvoorbeeld "HPOMEN30L kan geen BitLocker hebben, Windows 11 Home"), `tenant_notes` haalt de kennis terug (met zoekterm of overzicht over alle tenants) en `tenant_note_remove` vergeet een verouderd feit na bevestiging.
+- Kennis wordt automatisch teruggegeven bij `environment_use` en `environment_login`, en de contextregel meldt hoeveel notities er voor de actieve tenant bekend zijn, zodat opgeslagen kennis nooit ongemerkt blijft.
+- Serverinstructies verplichten de assistent de kennisbank te lezen voordat hij conclusies trekt over compliance of configuratie, en nieuwe tenant-specifieke feiten proactief op te slaan.
+- Opslag in `~/.microsoft-admin-mcp/tenant-knowledge.json` (te overrulen met `TENANT_KNOWLEDGE_FILE`), in het gebruikersprofiel en dus buiten het repository: klantkennis gaat nooit mee naar GitHub.
+
 ## [0.4.1] - 2026-07-25
 
 ### Opgelost

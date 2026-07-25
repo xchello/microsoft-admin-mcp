@@ -16,6 +16,8 @@ import { registerEnvironmentTools } from "./tools/environments.js";
 import { registerReportTools } from "./tools/report.js";
 import { registerVisualizeTools } from "./tools/visualize.js";
 import { registerKnowledgeTools } from "./tools/knowledge.js";
+import { registerTenantMemoryTools } from "./tools/tenant-memory.js";
+import { noteCount } from "./knowledge-store.js";
 
 const here = dirname(fileURLToPath(import.meta.url));
 const pkg = JSON.parse(readFileSync(join(here, "..", "package.json"), "utf8")) as {
@@ -50,7 +52,14 @@ Working principles:
    mismatches) read intune_troubleshooting_guide item 'method' first and follow its tiered approach.
 7. CONTEXT LINE. Every tool result starts with "[microsoft-admin-mcp] <scope> | <LEES/SCHRIJFACTIE>".
    Relay this to the user for every write: name the tenant/environment and the action type explicitly
-   before asking for confirmation, so the user always knows where a change will land.
+   before asking for confirmation, so the user always knows where a change will land. When the line
+   mentions "N tenantnotities bekend", call tenant_notes before drawing conclusions.
+8. TENANT MEMORY. The server keeps a per-tenant knowledge base (tenant_notes / tenant_note_add).
+   Read it when starting work on a tenant and before judging compliance or configuration: a note may
+   explain that a finding is intentional or technically impossible. Whenever the user states a durable
+   tenant-specific fact ("this device runs Windows 11 Home so BitLocker is impossible", "this customer
+   has no Intune Plan 2", "always pilot on group X"), store it with tenant_note_add and confirm briefly.
+   Do not store one-off task instructions, secrets, or data you can simply query again.
 `.trim();
 
 const server = new McpServer(
@@ -71,17 +80,39 @@ const LOCAL_READ_TOOLS = new Set([
   "mslearn_search",
   "mslearn_fetch",
   "intune_troubleshooting_guide",
+  "tenant_notes",
 ]);
 const LOCAL_WRITE_TOOLS = new Set([
   "export_report",
   "export_visualization",
   "environment_add",
   "environment_remove",
+  "tenant_note_add",
+  "tenant_note_remove",
 ]);
+
+const TENANT_MEMORY_TOOLS = new Set(["tenant_note_add", "tenant_notes", "tenant_note_remove"]);
+
+function activeEnvOrUndefined(): { name: string; tenantId: string } | undefined {
+  try {
+    return getActiveEnvironment();
+  } catch {
+    return undefined;
+  }
+}
 
 function contextHeader(toolName: string, args: Record<string, unknown> | undefined, readOnlyHint: boolean): string {
   let scope: string;
   let action: string;
+
+  if (TENANT_MEMORY_TOOLS.has(toolName)) {
+    const env = activeEnvOrUndefined();
+    scope = env
+      ? `lokale kennisbank van omgeving "${env.name}" (tenant ${env.tenantId})`
+      : "lokale kennisbank";
+    action = readOnlyHint ? "LEESACTIE" : "SCHRIJFACTIE (lokaal bestand, geen tenant-wijziging)";
+    return `[microsoft-admin-mcp] ${scope} | ${action}`;
+  }
 
   if (toolName === "powershell_run") {
     scope = "lokale machine";
@@ -95,12 +126,7 @@ function contextHeader(toolName: string, args: Record<string, unknown> | undefin
     scope = "lokaal";
     action = "LEESACTIE";
   } else {
-    let env: { name: string; tenantId: string } | undefined;
-    try {
-      env = getActiveEnvironment();
-    } catch {
-      env = undefined;
-    }
+    const env = activeEnvOrUndefined();
     scope = env ? `omgeving "${env.name}" (tenant ${env.tenantId})` : "geen omgeving geconfigureerd";
     const method = String(args?.method ?? "GET").toUpperCase();
     const isWrite =
@@ -108,6 +134,14 @@ function contextHeader(toolName: string, args: Record<string, unknown> | undefin
       ((toolName === "graph_request" || toolName === "azure_request") && method !== "GET") ||
       (!readOnlyHint && toolName !== "graph_request" && toolName !== "azure_request");
     action = isWrite ? `SCHRIJFACTIE${method !== "GET" ? ` (${method})` : ""}` : "LEESACTIE";
+
+    // Nudge: remind the assistant that tenant-specific knowledge is available.
+    if (env) {
+      const notes = noteCount(env.tenantId);
+      if (notes > 0) {
+        action += ` | ${notes} tenantnotitie${notes === 1 ? "" : "s"} bekend (tenant_notes)`;
+      }
+    }
   }
   return `[microsoft-admin-mcp] ${scope} | ${action}`;
 }
@@ -166,6 +200,7 @@ registerDocsTools(server);
 registerReportTools(server);
 registerVisualizeTools(server);
 registerKnowledgeTools(server);
+registerTenantMemoryTools(server);
 
 const transport = new StdioServerTransport();
 await server.connect(transport);

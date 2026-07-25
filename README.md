@@ -9,6 +9,7 @@ MCP server voor Microsoft **Azure**, **Entra ID**, **Intune** en **PowerShell**.
 - **Veilig standaard**: leesacties draaien direct, elke schrijfactie vereist expliciete bevestiging (`confirm: true`). Destructieve Intune-acties (wipe, retire) vereisen daarnaast de exacte apparaatnaam. Optionele `READ_ONLY` modus blokkeert alle schrijfacties.
 - **Rapportage**: exporteer data naar grafisch verzorgde rapporten in csv, xlsx (opgemaakt werkboek), html, pdf en docx.
 - **Visualisaties**: genereer infographic-achtige overzichten (gekleurde panelen, icoonkaarten, flow-pijlen) en Mermaid-diagrammen als png, pdf of html.
+- **Tenant-geheugen**: de server bouwt kennis op per klant. Vertel je "HPOMEN30L kan geen BitLocker hebben, het is Windows 11 Home", dan onthoudt hij dat voor die tenant en haalt het automatisch terug in volgende sessies. Opgeslagen in `~/.microsoft-admin-mcp/tenant-knowledge.json`, buiten dit repository.
 - **Intune troubleshooting kennis**: de vier-tier forensische methodiek van [powerstacks-corp/intune-advanced-troubleshooting](https://github.com/powerstacks-corp/intune-advanced-troubleshooting) (in de stijl van Rudy Ooms / call4cloud.nl) is meegeleverd, inclusief collector-scripts.
 - **PowerShell**: voer scripts lokaal uit (pwsh of Windows PowerShell) en genereer scripts volgens moderne standaarden via de ingebouwde `generate-powershell` prompt.
 - **4 auth-modi**: Azure CLI sessie, interactieve browser login, device code en app registration (secret of certificaat).
@@ -122,6 +123,7 @@ Secrets kun je met `env:NAAM` uit omgevingsvariabelen laten lezen zodat ze niet 
 | `export_report` | Rapport exporteren naar csv, xlsx, html, pdf of docx |
 | `export_visualization` | Grafisch aantrekkelijke infographics (panelen, icoonkaarten, flow-pijlen) en Mermaid-diagrammen naar html, png of pdf |
 | `intune_troubleshooting_guide` | Meegeleverde diepgaande Intune troubleshooting methodiek (vier-tier forensische aanpak) met scripts en uitgewerkte voorbeelden |
+| `tenant_note_add` / `tenant_notes` / `tenant_note_remove` | Tenant-kennisbank: duurzame feiten per klant onthouden, terughalen en vergeten (lokaal opgeslagen) |
 
 Plus de prompt `generate-powershell` voor het genereren van productiewaardige scripts met actuele moduleversies.
 

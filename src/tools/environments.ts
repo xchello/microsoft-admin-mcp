@@ -12,6 +12,7 @@ import {
 } from "../auth.js";
 import { addEnvironmentEntry, environmentsFilePath, removeEnvironmentEntry } from "../config.js";
 import { guardWrite } from "../guard.js";
+import { listNotes } from "../knowledge-store.js";
 
 export function registerEnvironmentTools(server: McpServer): void {
   server.registerTool(
@@ -49,10 +50,13 @@ export function registerEnvironmentTools(server: McpServer): void {
     async ({ name }) => {
       try {
         const env = setActiveEnvironment(name);
+        // Surface stored tenant knowledge immediately, so it informs everything that follows.
+        const notes = listNotes(env.tenantId);
         return jsonResult({
           activeEnvironment: env.name,
           tenantId: env.tenantId,
           note: "All following calls now target this tenant. Authentication happens lazily on the next call, or run environment_login to sign in now.",
+          knownAboutThisTenant: notes.length > 0 ? notes : "no notes stored yet",
         });
       } catch (err) {
         return errorResult(err);
@@ -169,10 +173,12 @@ export function registerEnvironmentTools(server: McpServer): void {
       try {
         const env = getActiveEnvironment();
         await getToken(GRAPH_SCOPE);
+        const notes = listNotes(env.tenantId);
         return jsonResult({
           environment: env.name,
           tenantId: env.tenantId,
           signedInAs: tokenClaims(GRAPH_SCOPE) ?? "token acquired",
+          knownAboutThisTenant: notes.length > 0 ? notes : "no notes stored yet",
         });
       } catch (err) {
         return errorResult(err);
