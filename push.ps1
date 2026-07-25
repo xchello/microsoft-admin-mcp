@@ -30,7 +30,12 @@
 param(
     [string]$Message   = "Update $(Get-Date -Format 'yyyy-MM-dd HH:mm')",
     [string]$RemoteUrl = 'https://github.com/xchello/microsoft-admin-mcp.git',
-    [string]$Branch    = 'main'
+    [string]$Branch    = 'main',
+    # Zet een git tag op basis van het versienummer in package.json (bijv. v0.6.0),
+    # zodat je altijd naar een werkende versie terug kunt en kunt vastpinnen.
+    [switch]$Tag,
+    # Draai de testsuite voor de push; laat staan tenzij je bewust wilt overslaan.
+    [switch]$SkipTests
 )
 
 Set-StrictMode -Version Latest
@@ -53,6 +58,19 @@ try {
     # --- Identiteit (alleen zetten als die nog ontbreekt) ---
     if (-not (git config user.name))  { git config user.name  'Xander Oortgiesen' }
     if (-not (git config user.email)) { git config user.email 'xanderoortgiesen@gmail.com' }
+
+    # --- Testen voor de push: een kapotte main breekt al je devices tegelijk ---
+    if (-not $SkipTests) {
+        if (Test-Path (Join-Path $PSScriptRoot 'tests\smoke.mjs')) {
+            Write-Step "Testsuite draaien"
+            npm test
+            if ($LASTEXITCODE -ne 0) {
+                throw "De testsuite faalt, er is niets gepusht. Draai opnieuw met -SkipTests als je dit bewust wilt negeren."
+            }
+        } else {
+            Write-Warning "Geen testsuite gevonden, testen overgeslagen."
+        }
+    }
 
     # --- Committen ---
     Write-Step "Wijzigingen committen"
@@ -79,6 +97,20 @@ try {
         throw ("git push is mislukt (exit code $LASTEXITCODE). Meestal is dit een verouderde GitHub-login. " +
                "Oplossing: draai 'git credential-manager github login' en daarna dit script opnieuw. " +
                "Werkt dat niet, verwijder dan alle github.com-items in Windows Credentiebeheer en probeer opnieuw.")
+    }
+
+    # --- Versietag ---
+    if ($Tag) {
+        $version = (Get-Content (Join-Path $PSScriptRoot 'package.json') -Raw | ConvertFrom-Json).version
+        $tagName = "v$version"
+        Write-Step "Tag $tagName zetten"
+        if ((git tag --list $tagName)) {
+            Write-Warning "Tag $tagName bestaat al; overgeslagen. Verhoog het versienummer in package.json voor een nieuwe release."
+        } else {
+            git tag -a $tagName -m $Message
+            git push origin $tagName
+            if ($LASTEXITCODE -ne 0) { Write-Warning "De tag kon niet gepusht worden." }
+        }
     }
 
     Write-Host ""

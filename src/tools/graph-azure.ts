@@ -3,6 +3,9 @@ import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { armRequest, errorResult, graphRequest, jsonResult } from "../http.js";
 import { guardWrite } from "../guard.js";
 import { authStatus, tokenClaims, GRAPH_SCOPE } from "../auth.js";
+import { capabilityOverview } from "../scopes.js";
+import { persistenceStatus } from "../token-cache.js";
+import { redact } from "../audit.js";
 
 export function registerGraphAzureTools(server: McpServer, version: string): void {
   server.registerTool(
@@ -10,8 +13,10 @@ export function registerGraphAzureTools(server: McpServer, version: string): voi
     {
       title: "Authentication status",
       description:
-        "Show the server version, configured auth mode, tenant, cached tokens and the identity " +
-        "(user or app) of the current Microsoft Graph token. Use this first when troubleshooting.",
+        "Show the server version, configured auth mode, tenant, cached tokens, the identity (user or app) " +
+        "of the current Microsoft Graph token, which capabilities that identity actually has (derived from " +
+        "its scopes and app roles), whether writing is blocked, and whether the sign-in survives a restart. " +
+        "Use this first when troubleshooting.",
       inputSchema: {},
       annotations: { readOnlyHint: true },
     },
@@ -21,6 +26,8 @@ export function registerGraphAzureTools(server: McpServer, version: string): voi
           serverVersion: version,
           ...authStatus(),
           graphIdentity: tokenClaims(GRAPH_SCOPE) ?? "no Graph token acquired yet",
+          capabilities: capabilityOverview(),
+          persistentSignIn: persistenceStatus(),
         });
       } catch (err) {
         return errorResult(err);
@@ -56,9 +63,11 @@ export function registerGraphAzureTools(server: McpServer, version: string): voi
       try {
         const m = method ?? "GET";
         if (m !== "GET") {
+          // The preview is shown to the user AND written to the audit log, so a body
+          // containing a password or secret must be masked before it is rendered.
           const guard = guardWrite(
             confirm,
-            `${m} ${v ?? "v1.0"}${path} with body: ${JSON.stringify(body ?? {}).slice(0, 800)}`
+            `${m} ${v ?? "v1.0"}${path} with body: ${JSON.stringify(redact(body ?? {})).slice(0, 800)}`
           );
           if (guard) return guard;
         }
@@ -102,7 +111,7 @@ export function registerGraphAzureTools(server: McpServer, version: string): voi
         if (m !== "GET") {
           const guard = guardWrite(
             confirm,
-            `${m} ${path} (api-version ${apiVersion}) with body: ${JSON.stringify(body ?? {}).slice(0, 800)}`
+            `${m} ${path} (api-version ${apiVersion}) with body: ${JSON.stringify(redact(body ?? {})).slice(0, 800)}`
           );
           if (guard) return guard;
         }

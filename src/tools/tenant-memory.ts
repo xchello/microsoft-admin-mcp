@@ -2,7 +2,7 @@ import { z } from "zod";
 import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { errorResult, jsonResult } from "../http.js";
 import { getActiveEnvironment } from "../auth.js";
-import { guardWrite } from "../guard.js";
+import { guardWrite, readOnlyReason } from "../guard.js";
 import {
   addNote,
   knowledgeFilePath,
@@ -40,6 +40,12 @@ export function registerTenantMemoryTools(server: McpServer): void {
     },
     async ({ topic, note, tags }) => {
       try {
+        const blocked = readOnlyReason();
+        if (blocked) {
+          return errorResult(
+            `Geweigerd: schrijven is uitgeschakeld (${blocked}), dus er is niets in de kennisbank opgeslagen.`
+          );
+        }
         const env = getActiveEnvironment();
         const result = addNote({
           tenantId: env.tenantId,

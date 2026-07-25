@@ -124,16 +124,36 @@ Secrets kun je met `env:NAAM` uit omgevingsvariabelen laten lezen zodat ze niet 
 | `export_visualization` | Grafisch aantrekkelijke infographics (panelen, icoonkaarten, flow-pijlen) en Mermaid-diagrammen naar html, png of pdf |
 | `intune_troubleshooting_guide` | Meegeleverde diepgaande Intune troubleshooting methodiek (vier-tier forensische aanpak) met scripts en uitgewerkte voorbeelden |
 | `tenant_note_add` / `tenant_notes` / `tenant_note_remove` | Tenant-kennisbank: duurzame feiten per klant onthouden, terughalen en vergeten (lokaal opgeslagen) |
+| `intune_device_compliance_detail` | Welke policy en welke instelling precies faalt op een device, plus encryptie- en Defender-status |
+| `intune_app_assignments` | Aan welke groepen een app is toegewezen, met groepsnamen |
+| `multi_tenant_query` | Dezelfde gegevens over meerdere klanten in één aanroep, met klantkolom |
+| `audit_log` | Logboek van alle schrijfacties: wat is waar en wanneer gewijzigd |
+| `server_diagnostics` | Waar de lokale data staat en welke mogelijkheden deze machine heeft |
 
 Plus de prompt `generate-powershell` voor het genereren van productiewaardige scripts met actuele moduleversies.
 
 ## Veiligheidsmodel
 
-1. `READ_ONLY=true` blokkeert elke schrijfactie, ongeacht bevestiging.
-2. Schrijfacties zonder `confirm: true` voeren niets uit; ze geven een preview terug en vragen de assistent om eerst expliciete goedkeuring aan jou te vragen.
-3. Destructieve Intune-acties (wipe, retire, cleanWindowsDevice, resetPasscode) vereisen bovendien `expectedDeviceName` dat exact overeenkomt met het doelapparaat.
-4. PowerShell-scripts met muterende werkwoorden (Set-, New-, Remove-, Invoke-, enz.) vereisen ook bevestiging.
-5. Rapporten worden standaard weggeschreven naar `~/microsoft-admin-mcp-reports/`.
+1. `READ_ONLY=true` blokkeert elke schrijfactie server-breed; `"readOnly": true` op een omgeving doet dat voor één klant. Beide zijn niet te omzeilen door een andere omgeving toe te voegen.
+2. Schrijfacties zonder `confirm: true` voeren niets uit; ze geven een preview (met geredigeerde geheimen) terug en vragen de assistent om eerst expliciete goedkeuring aan jou te vragen.
+3. Destructieve Intune-acties (wipe, retire, cleanWindowsDevice, resetPasscode) vereisen bovendien `expectedDeviceName` dat exact overeenkomt met het doelapparaat, en worden geweigerd als de naam niet te verifiëren is of de permissie ontbreekt.
+4. PowerShell wordt volgens default-deny geclassificeerd: een script geldt alleen als lezend wanneer elk commando erin herkenbaar lezend is. Aliassen, methodes op objecten, reflectie, redirection en een HTTP-methode in een variabele gelden dus als schrijfactie.
+5. Elke actie begint met een contextregel die de tenant en het actietype noemt, en elke schrijfactie wordt vastgelegd in het auditlogboek.
+6. Tenant-aanroepen worden geserialiseerd op volgorde van binnenkomst, zodat een gelijktijdige omgevingswissel nooit tot de verkeerde klant kan leiden.
+7. Rapporten gaan standaard naar `~/microsoft-admin-mcp-reports/` (alleen-eigenaar), met de klant in de bestandsnaam; bestaande bestanden worden nooit ongemerkt overschreven.
+
+### Waar staat wat lokaal
+
+Alles buiten het repository, in je gebruikersprofiel onder `~/.microsoft-admin-mcp/`, als alleen-eigenaar: `environments.json` (klanten), `tenant-knowledge.json` (kennis per klant), `audit-log.jsonl` (schrijfacties), `auth-records.json` (welk account is aangemeld) en de kenniscache. `server_diagnostics` toont de exacte paden. Gebruik voor secrets bij voorkeur een verwijzing (`env:VARNAAM`) in plaats van de waarde zelf.
+
+## Ontwikkelen
+
+```bash
+npm install
+npm test        # compileert en draait 33 tests
+```
+
+Elke push naar main draait dezelfde build en tests via GitHub Actions. Omdat devices via `npx github:...` altijd de laatste main ophalen, breekt een kapotte commit alles tegelijk: `push.ps1` draait daarom de testsuite vóór de push, en met `.\push.ps1 -Tag` zet je een versietag zodat je kunt vastpinnen op `github:xchello/microsoft-admin-mcp#v0.6.0`.
 
 ## Versies en doorontwikkeling
 

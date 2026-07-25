@@ -8,6 +8,7 @@ import {
   type TokenCredential,
 } from "@azure/identity";
 import { config, GRAPH_CLI_CLIENT_ID, type Environment } from "./config.js";
+import { forgetAuthRecord, loadAuthRecord, persistenceOptions, saveAuthRecord } from "./token-cache.js";
 
 export const GRAPH_SCOPE = "https://graph.microsoft.com/.default";
 export const ARM_SCOPE = "https://management.azure.com/.default";
@@ -30,6 +31,8 @@ export function listEnvironments(): Array<Record<string, unknown>> {
     description: e.description,
     active: e.name === activeEnvName,
     hasAppCredentials: Boolean(e.clientSecret || e.certificatePath),
+    readOnly: e.readOnly === true,
+    signedIn: credentials.has(e.name),
   }));
 }
 
@@ -45,6 +48,9 @@ export function invalidateEnvironment(name: string): void {
   for (const key of [...tokenCache.keys()]) {
     if (key.startsWith(`${name}|`)) tokenCache.delete(key);
   }
+  // Also drop the persisted account record: reusing the same environment name for a
+  // different tenant would otherwise hand tenant A's account to a tenant B credential.
+  forgetAuthRecord(name);
   if (activeEnvName === name && !config.environments.some((e) => e.name === name)) {
     activeEnvName = config.environments[0]?.name ?? "default";
   }
@@ -63,21 +69,44 @@ export function setActiveEnvironment(name: string): Environment {
 
 // ---------- Credentials and tokens, per environment ----------
 
-const credentials = new Map<string, { credential: TokenCredential; mode: string }>();
+const credentials = new Map<
+  string,
+  { credential: TokenCredential; mode: string; supportsRecord: boolean }
+>();
 
-function buildCredential(env: Environment): { credential: TokenCredential; mode: string } {
+/** Credentials that can hand us an AuthenticationRecord for silent reuse after a restart. */
+interface RecordCapable {
+  authenticate(scopes: string | string[]): Promise<{ username?: string } | undefined>;
+}
+
+function buildCredential(env: Environment): {
+  credential: TokenCredential;
+  mode: string;
+  supportsRecord: boolean;
+} {
   const tenantId = env.tenantId;
   const clientId = env.clientId ?? GRAPH_CLI_CLIENT_ID;
+  // Reuse the previously signed-in account so a restart does not force a new prompt.
+  const shared = {
+    ...persistenceOptions(),
+    authenticationRecord: loadAuthRecord(env.name),
+  };
 
   const makeDeviceCode = () =>
     new DeviceCodeCredential({
       tenantId,
       clientId,
+      ...shared,
       userPromptCallback: (info) => log(`[${env.name}] SIGN IN REQUIRED:`, info.message),
     });
 
   const makeInteractive = () =>
-    new InteractiveBrowserCredential({ tenantId, clientId, redirectUri: "http://localhost:8400" });
+    new InteractiveBrowserCredential({
+      tenantId,
+      clientId,
+      redirectUri: "http://localhost:8400",
+      ...shared,
+    });
 
   const makeApp = (): TokenCredential => {
     if (env.certificatePath) return new ClientCertificateCredential(tenantId, clientId, env.certificatePath);
@@ -92,17 +121,18 @@ function buildCredential(env: Environment): { credential: TokenCredential; mode:
       return {
         credential: new AzureCliCredential({ tenantId: tenantId === "common" ? undefined : tenantId }),
         mode: "cli",
+        supportsRecord: false,
       };
     case "interactive":
-      return { credential: makeInteractive(), mode: "interactive" };
+      return { credential: makeInteractive(), mode: "interactive", supportsRecord: true };
     case "devicecode":
-      return { credential: makeDeviceCode(), mode: "devicecode" };
+      return { credential: makeDeviceCode(), mode: "devicecode", supportsRecord: true };
     case "app":
-      return { credential: makeApp(), mode: "app (client credentials)" };
+      return { credential: makeApp(), mode: "app (client credentials)", supportsRecord: false };
     case "auto":
     default:
       if (env.clientSecret || env.certificatePath) {
-        return { credential: makeApp(), mode: "app (client credentials, auto)" };
+        return { credential: makeApp(), mode: "app (client credentials, auto)", supportsRecord: false };
       }
       return {
         credential: new ChainedTokenCredential(
@@ -110,6 +140,7 @@ function buildCredential(env: Environment): { credential: TokenCredential; mode:
           makeDeviceCode()
         ),
         mode: "auto (az cli, then device code)",
+        supportsRecord: false,
       };
   }
 }
@@ -132,6 +163,18 @@ export async function getToken(scope: string): Promise<string> {
     entry = buildCredential(env);
     credentials.set(env.name, entry);
   }
+
+  // First sign-in for this environment: capture the account so later restarts are silent.
+  if (entry.supportsRecord && !loadAuthRecord(env.name)) {
+    try {
+      const record = await (entry.credential as unknown as RecordCapable).authenticate(scope);
+      if (record) saveAuthRecord(env.name, record as never);
+    } catch (err) {
+      // Not fatal: fall through to getToken, which performs its own interactive flow.
+      log(`[${env.name}] could not persist the sign-in:`, (err as Error).message);
+    }
+  }
+
   const result = await entry.credential.getToken(scope);
   if (!result) throw new Error(`Failed to acquire token for scope ${scope} (environment ${env.name})`);
   tokenCache.set(cacheKey, { token: result.token, expiresOnTimestamp: result.expiresOnTimestamp });
@@ -152,7 +195,12 @@ export function authStatus(): Record<string, unknown> {
     configuredAuthMode: env.authMode ?? "auto",
     resolvedAuthMode: credentials.get(env.name)?.mode ?? "not yet authenticated",
     clientId: env.clientId ?? `${GRAPH_CLI_CLIENT_ID} (Microsoft Graph Command Line Tools, default)`,
-    readOnly: config.readOnly,
+    readOnly: config.readOnly || env.readOnly === true,
+    readOnlyReason: config.readOnly
+      ? "READ_ONLY=true voor de hele server"
+      : env.readOnly
+        ? `omgeving "${env.name}" staat op read-only`
+        : undefined,
     cachedTokens: scopes,
     allEnvironments: listEnvironments(),
   };

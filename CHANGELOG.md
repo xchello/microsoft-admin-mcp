@@ -3,6 +3,38 @@
 Alle noemenswaardige wijzigingen aan dit project worden hier bijgehouden.
 Het formaat volgt [Keep a Changelog](https://keepachangelog.com/) en het project gebruikt [semantische versienummers](https://semver.org/).
 
+## [0.6.0] - 2026-07-25
+
+Grote versie met nieuwe functionaliteit, een testsuite en een reeks beveiligingsreparaties die uit een gerichte audit kwamen.
+
+### Toegevoegd
+- Auditlogboek van elke schrijfactie in `~/.microsoft-admin-mcp/audit-log.jsonl`, met tijdstip, omgeving, tenant, tool, geredigeerde argumenten en uitkomst (uitgevoerd, geweigerd, wacht op bevestiging, fout). Uitleesbaar met de nieuwe tool `audit_log`; roteert automatisch en blijft ook bij een oud logboek snel.
+- `server_diagnostics`: waar de lokale data staat en welke optionele mogelijkheden (pdf-rendering, persistente login) op deze machine beschikbaar zijn.
+- Persistente aanmelding: de aanmelding overleeft een herstart van de host, via de door het besturingssysteem versleutelde tokencache plus een opgeslagen accountverwijzing. Valt netjes terug op opnieuw inloggen als de optionele package ontbreekt.
+- `readOnly` per omgeving, zodat je bij een klant alleen kunt rapporteren terwijl je eigen tenant wel wijzigbaar blijft.
+- Rechtencontrole vooraf: een Intune-actie waarvoor de aanmelding de permissie mist wordt geweigerd met een duidelijke melding in plaats van een 403 halverwege. `auth_status` toont nu ook wat de huidige identiteit daadwerkelijk mag.
+- `intune_device_compliance_detail`: welke policy en welke instelling precies faalt op een device, inclusief encryptie- en Defender-status op Windows.
+- `intune_app_assignments`: aan welke groepen een app is toegewezen, met groepsnamen in één gebundelde aanvraag.
+- `multi_tenant_query`: dezelfde gegevens over meerdere klanten in één aanroep, met klantkolom, per-klant foutmelding en gegarandeerd herstel van de actieve omgeving.
+- Grafieken: donut-, staaf- en horizontale staafdiagrammen als inline SVG in rapporten (html en pdf) en in visualisaties, plus `autoChart` dat zelf de verdeling van een kolom berekent.
+- `graphBatch`: meerdere Graph-aanvragen in één ronde, met een garantie dat elk antwoord bij de juiste aanvraag hoort.
+- Verversbare kennis: `intune_troubleshooting_guide` kan de nieuwste versie van de troubleshooting-methodiek uit de bron ophalen naar een lokale cache.
+- Testsuite (`npm test`) met 33 tests over veiligheidsmodel, omgevingsbeheer, kennisbank, rapportage en classificatie, plus een GitHub Actions build-check op Node 20 en 22 en een `-Tag` optie in push.ps1 voor releasetags.
+
+### Opgelost (beveiliging)
+- **PowerShell-classificatie is nu default-deny.** Aantoonbaar konden `-WhatIf:$false`, aliassen als `del` en `rm`, `Out-File`, `[System.IO.File]::Delete`, `iex`, `$ExecutionContext.InvokeCommand.InvokeScript`, methodes op variabelen zoals `$x.Delete()`, reflectie en een HTTP-methode in een variabele of splat als "alleen lezen" doorgaan, waardoor ze zonder bevestiging en zelfs in read-only stand uitgevoerd werden. Een script geldt nu alleen als lezend wanneer elk commando erin herkenbaar lezend is.
+- **Wipe zonder naamcontrole.** Als Graph geen apparaatnaam teruggaf, waren beide kanten van de vergelijking leeg en ging een wipe door zonder dat de naam was opgegeven. Nu wordt zo'n actie geweigerd.
+- **Verkeerde tenant bij gelijktijdige aanroepen.** Tenantkeuze was globale toestand, waardoor een aanroep die de gebruiker voor klant A goedkeurde bij klant B kon uitkomen, en een klantnotitie in de verkeerde kennisbank kon landen. Tenant-aanroepen worden nu geserialiseerd op de volgorde waarin ze binnenkomen, met een tijdslimiet zodat een openstaande aanmelding de rij niet blokkeert.
+- **Geheimen in het auditlogboek.** Een door Graph teruggegeven client secret, tijdelijke toegangspas of storage key kwam letterlijk in het logboek en werd door `audit_log` weer aan het model gegeven. Resultaattekst en bevestigingspreviews worden nu geredigeerd, en de redactie dekt veel meer sleutel- en waardevormen.
+- **Read-only was omzeilbaar.** Een nieuwe schrijfbare omgeving toevoegen en daarnaar wisselen omzeilde de hele beveiliging; ook de kennisbank en het verversen van kennis schreven door. Alle drie respecteren nu de read-only stand.
+- **Rapporten schreven de verkeerde klant op.** De voettekst en het kengetal kwamen uit de actieve omgeving in plaats van uit de gerapporteerde data, waardoor een document voor klant A de tenant-id van klant B kon prijsgeven. Attributie komt nu uit de data of uit een expliciete parameter.
+- **Rapporten overschreven elkaar stil.** Twee exports met dezelfde titel op dezelfde dag schreven hetzelfde bestand; nu zit de klant in de bestandsnaam en wordt een bestaand bestand nooit ongemerkt vervangen.
+- **Padveiligheid.** Schrijven in de eigen configuratiemap of een `.git`-map wordt geweigerd, een symlink kan niet meer uit de rapportmap ontsnappen, en overschrijven buiten de rapportmap vereist bevestiging.
+- **HTML-injectie.** Namen uit een tenant konden script uitvoeren in de headless browser die pdf en png maakt. Alle ingevoegde tekst wordt nu ontsnapt en kleuren worden gevalideerd.
+- **Bestandsrechten.** Alle lokale statusbestanden worden nu als alleen-eigenaar aangemaakt (0600 in een 0700 map) in plaats van wereld-leesbaar.
+- **Dataverlies bij een kapot bestand.** Een enkele komma te veel in environments.json wiste bij de volgende schrijfactie al je tenants; kapotte bestanden worden nu bewaard en niet overschreven. Verwijderingen blijven verwijderd, handmatige wijzigingen blijven staan en alle statusbestanden worden atomisch geschreven.
+- Verder: geen herhaalde POST of DELETE meer na een 504, `@odata.nextLink` wordt alleen nog naar Graph gevolgd, tijdslimieten op alle externe aanvragen, een onjuiste `REQUEST_TIMEOUT_MS` breekt niets meer, afgekapte lijsten worden expliciet gemeld in plaats van als volledig te gelden, een mislukte gebundelde subaanvraag wordt niet meer als diagnose gepresenteerd, een quadratische regex die de server seconden kon blokkeren is weg, PowerShell-uitvoer meldt afkapping, lange scripts werken ook op Windows, en tijdelijke bestanden met klantdata worden opgeruimd.
+
 ## [0.5.0] - 2026-07-25
 
 ### Toegevoegd

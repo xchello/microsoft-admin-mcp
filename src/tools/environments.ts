@@ -11,7 +11,7 @@ import {
   tokenClaims,
 } from "../auth.js";
 import { addEnvironmentEntry, environmentsFilePath, removeEnvironmentEntry } from "../config.js";
-import { guardWrite } from "../guard.js";
+import { guardWrite, readOnlyReason } from "../guard.js";
 import { listNotes } from "../knowledge-store.js";
 
 export function registerEnvironmentTools(server: McpServer): void {
@@ -90,12 +90,27 @@ export function registerEnvironmentTools(server: McpServer): void {
           .describe("Only for authMode 'app'. Prefer 'env:VARNAME' so no secret is stored in plain text."),
         certificatePath: z.string().optional().describe("PEM certificate path, alternative to clientSecret."),
         description: z.string().optional(),
+        readOnly: z
+          .boolean()
+          .optional()
+          .describe(
+            "true blocks every write for this tenant only. Recommended for customer tenants where you just report."
+          ),
         login: z.boolean().optional().default(true).describe("Sign in immediately to verify the connection."),
       },
       annotations: { readOnlyHint: false },
     },
-    async ({ name, tenantId, authMode, clientId, clientSecret, certificatePath, description, login }) => {
+    async ({ name, tenantId, authMode, clientId, clientSecret, certificatePath, description, readOnly, login }) => {
       try {
+        // Read-only must not be escapable: adding a writable environment for the same
+        // tenant and switching to it was a proven bypass of the whole safety switch.
+        const blocked = readOnlyReason();
+        if (blocked && readOnly !== true) {
+          return errorResult(
+            `Geweigerd: schrijven is uitgeschakeld (${blocked}). Een nieuwe omgeving toevoegen die WEL mag schrijven ` +
+              `zou die beveiliging omzeilen. Voeg de omgeving toe met readOnly: true, of zet de read-only stand uit.`
+          );
+        }
         const file = addEnvironmentEntry({
           name,
           tenantId,
@@ -104,6 +119,7 @@ export function registerEnvironmentTools(server: McpServer): void {
           clientSecret,
           certificatePath,
           description,
+          readOnly,
         });
         setActiveEnvironment(name);
         let identity: unknown = "login skipped (login:false)";
@@ -115,6 +131,7 @@ export function registerEnvironmentTools(server: McpServer): void {
           added: name,
           tenantId,
           authMode: authMode ?? "interactive",
+          readOnly: readOnly === true,
           storedIn: file,
           storageNote:
             "Lokaal opgeslagen in je gebruikersprofiel, buiten het git-repository. Gaat nooit mee naar GitHub.",

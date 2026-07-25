@@ -1,6 +1,6 @@
 {
   "name": "microsoft-admin-mcp",
-  "version": "0.5.0",
+  "version": "0.6.0",
   "description": "MCP server for Microsoft Azure, Entra ID, Intune and PowerShell automation. Read plus confirmed-write operations via Microsoft Graph and Azure Resource Manager.",
   "type": "module",
   "license": "MIT",
@@ -30,7 +30,11 @@
     "build": "tsc",
     "prepare": "npm run build",
     "start": "node dist/index.js",
+    "test": "npm run build && node tests/smoke.mjs",
     "watch": "tsc --watch"
+  },
+  "optionalDependencies": {
+    "@azure/identity-cache-persistence": "^1.1.0"
   },
   "dependencies": {
     "@azure/identity": "^4.5.0",

@@ -1,0 +1,37 @@
+name: Build en test
+
+# Elk device start deze server met `npx github:xchello/microsoft-admin-mcp`, dus een
+# kapotte commit op main breekt meteen alle devices. Deze check vangt dat af.
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  build-test:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        node: ["20", "22"]
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ matrix.node }}
+
+      - name: Dependencies installeren
+        run: npm install --no-audit --no-fund
+
+      - name: Compileren
+        run: npm run build
+
+      - name: Testsuite
+        run: node tests/smoke.mjs
+
+      - name: Controleren dat de server opstart
+        run: |
+          printf '%s\n' '{"jsonrpc":"2.0","id":1,"method":"initialize","params":{"protocolVersion":"2024-11-05","capabilities":{},"clientInfo":{"name":"ci","version":"1"}}}' \
+            | timeout 30 node dist/index.js | grep -q '"serverInfo"'
