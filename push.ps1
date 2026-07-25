@@ -56,6 +56,7 @@ try {
 
     # --- Committen ---
     Write-Step "Wijzigingen committen"
+    git rm -r --cached _to_delete 2>$null | Out-Null   # nooit tijdelijke bestanden meesturen
     git add -A
     if (git status --porcelain) {
         git commit -m $Message | Out-Host
@@ -74,6 +75,11 @@ try {
     # --- Pushen (Git Credential Manager regelt de login) ---
     Write-Step "Pushen naar $RemoteUrl ($Branch)"
     git push -u origin $Branch
+    if ($LASTEXITCODE -ne 0) {
+        throw ("git push is mislukt (exit code $LASTEXITCODE). Meestal is dit een verouderde GitHub-login. " +
+               "Oplossing: draai 'git credential-manager github login' en daarna dit script opnieuw. " +
+               "Werkt dat niet, verwijder dan alle github.com-items in Windows Credentiebeheer en probeer opnieuw.")
+    }
 
     Write-Host ""
     Write-Host "Klaar! Bekijk het resultaat op: $($RemoteUrl -replace '\.git$','')" -ForegroundColor Green
