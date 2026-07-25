@@ -5,7 +5,7 @@ import { config } from "../config.js";
 import { guardWrite } from "../guard.js";
 import { errorResult } from "../http.js";
 
-const MUTATING_VERBS =
+export const MUTATING_VERBS =
   /\b(Set|New|Remove|Add|Update|Clear|Disable|Enable|Stop|Start|Restart|Reset|Grant|Revoke|Install|Uninstall|Move|Rename|Register|Unregister|Suspend|Resume|Deny|Block|Approve|Invoke)-[A-Za-z]+/;
 
 const OUTPUT_CAP = 60_000;

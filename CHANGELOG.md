@@ -3,6 +3,12 @@
 Alle noemenswaardige wijzigingen aan dit project worden hier bijgehouden.
 Het formaat volgt [Keep a Changelog](https://keepachangelog.com/) en het project gebruikt [semantische versienummers](https://semver.org/).
 
+## [0.3.0] - 2026-07-25
+
+### Toegevoegd
+- Contextregel bij elke actie: ieder toolresultaat begint met "[microsoft-admin-mcp] omgeving/tenant | LEESACTIE of SCHRIJFACTIE", zodat altijd zichtbaar is in welke tenant iets gebeurt en of het lezen of schrijven is. PowerShell en lokale bestandsexports worden apart gemarkeerd.
+- Serverinstructie die de assistent verplicht om bij elke schrijfactie de tenant en het actietype expliciet aan de gebruiker te melden voor de bevestiging.
+
 ## [0.2.0] - 2026-07-25
 
 ### Toegevoegd

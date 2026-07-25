@@ -5,7 +5,8 @@ import { readFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 import { dirname, join } from "node:path";
 import { z } from "zod";
-import { log } from "./auth.js";
+import { getActiveEnvironment, log } from "./auth.js";
+import { MUTATING_VERBS } from "./tools/powershell.js";
 import { registerGraphAzureTools } from "./tools/graph-azure.js";
 import { registerEntraTools } from "./tools/entra.js";
 import { registerIntuneTools } from "./tools/intune.js";
@@ -44,12 +45,77 @@ Working principles:
    try/catch with -ErrorAction Stop, objects instead of Write-Host, least-privilege scopes.
 6. TROUBLESHOOTING. For Windows/Intune device problems (enrollment, sync, stuck apps, compliance
    mismatches) read intune_troubleshooting_guide item 'method' first and follow its tiered approach.
+7. CONTEXT LINE. Every tool result starts with "[microsoft-admin-mcp] <scope> | <LEES/SCHRIJFACTIE>".
+   Relay this to the user for every write: name the tenant/environment and the action type explicitly
+   before asking for confirmation, so the user always knows where a change will land.
 `.trim();
 
 const server = new McpServer(
   { name: "microsoft-admin-mcp", version: pkg.version },
   { instructions: INSTRUCTIONS }
 );
+
+/**
+ * Context header: every tool result starts with one line stating the active
+ * environment/tenant and whether this was a read or a write action, so the
+ * user always sees WHERE something happened and WHAT kind of action it was.
+ */
+const LOCAL_READ_TOOLS = new Set([
+  "environment_list",
+  "environment_use",
+  "auth_status",
+  "psgallery_module_info",
+  "mslearn_search",
+  "mslearn_fetch",
+  "intune_troubleshooting_guide",
+]);
+const LOCAL_WRITE_TOOLS = new Set(["export_report", "export_visualization"]);
+
+function contextHeader(toolName: string, args: Record<string, unknown> | undefined, readOnlyHint: boolean): string {
+  let scope: string;
+  let action: string;
+
+  if (toolName === "powershell_run") {
+    scope = "lokale machine";
+    action = MUTATING_VERBS.test(String(args?.script ?? ""))
+      ? "SCHRIJFACTIE (PowerShell, kan wijzigingen doorvoeren)"
+      : "LEESACTIE (PowerShell)";
+  } else if (LOCAL_WRITE_TOOLS.has(toolName)) {
+    scope = "lokaal";
+    action = "SCHRIJFACTIE (lokaal bestand, geen tenant-wijziging)";
+  } else if (LOCAL_READ_TOOLS.has(toolName)) {
+    scope = "lokaal";
+    action = "LEESACTIE";
+  } else {
+    let env: { name: string; tenantId: string } | undefined;
+    try {
+      env = getActiveEnvironment();
+    } catch {
+      env = undefined;
+    }
+    scope = env ? `omgeving "${env.name}" (tenant ${env.tenantId})` : "geen omgeving geconfigureerd";
+    const method = String(args?.method ?? "GET").toUpperCase();
+    const isWrite =
+      toolName === "intune_device_action" ||
+      ((toolName === "graph_request" || toolName === "azure_request") && method !== "GET") ||
+      (!readOnlyHint && toolName !== "graph_request" && toolName !== "azure_request");
+    action = isWrite ? `SCHRIJFACTIE${method !== "GET" ? ` (${method})` : ""}` : "LEESACTIE";
+  }
+  return `[microsoft-admin-mcp] ${scope} | ${action}`;
+}
+
+// Wrap registerTool so every handler result gets the context header prepended.
+const origRegisterTool = server.registerTool.bind(server);
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+(server as any).registerTool = (name: string, cfg: any, handler: any) =>
+  origRegisterTool(name, cfg, (async (args: any, extra: any) => {
+    const result = await handler(args, extra);
+    const header = contextHeader(name, args, cfg?.annotations?.readOnlyHint === true);
+    return {
+      ...result,
+      content: [{ type: "text", text: header }, ...(result?.content ?? [])],
+    };
+  }) as any);
 
 // Prompt template: generate a modern PowerShell script the right way.
 server.registerPrompt(

@@ -1,0 +1,12 @@
+{
+  "remoteUrl": "https://github.com/xchello/microsoft-admin-mcp.git",
+  "branch": "main",
+  "userName": "Xander Oortgiesen",
+  "userEmail": "xanderoortgiesen@gmail.com",
+  "auth": {
+    "method": "credentialmanager",
+    "_uitleg_method": "credentialmanager = Windows Git Credential Manager (aanbevolen, browserlogin, geen token nodig). pat = Personal Access Token hieronder invullen.",
+    "gitHubUser": "xchello",
+    "pat": ""
+  }
+}
