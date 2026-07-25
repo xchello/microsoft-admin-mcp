@@ -78,7 +78,9 @@ Voor Azure Resource Manager: geef de identiteit een passende Azure RBAC-rol (bij
 
 ## Meerdere klanten (multi-tenant)
 
-Maak `~/.microsoft-admin-mcp/environments.json` (of zet `ENVIRONMENTS_FILE`):
+De makkelijkste manier: vraag het gewoon in de chat, bijvoorbeeld "verbind met tenant klantx.onmicrosoft.com en noem hem klant-x". De server slaat de omgeving dan op via `environment_add` en opent een browservenster om in te loggen; er zijn geen secrets nodig. Omgevingen staan lokaal in `~/.microsoft-admin-mcp/environments.json` in je gebruikersprofiel, buiten dit repository, en gaan dus nooit mee naar GitHub. Verwijderen kan met "verwijder omgeving klant-x" (met bevestiging).
+
+Handmatig kan ook: maak `~/.microsoft-admin-mcp/environments.json` (of zet `ENVIRONMENTS_FILE`):
 
 ```json
 [
@@ -106,6 +108,7 @@ Secrets kun je met `env:NAAM` uit omgevingsvariabelen laten lezen zodat ze niet 
 | Tool | Doel |
 |---|---|
 | `environment_list` / `environment_use` | Klantomgevingen tonen en wisselen |
+| `environment_add` / `environment_remove` / `environment_login` | Interactief tenants verbinden (lokaal opgeslagen, nooit in git), verwijderen en de login testen |
 | `auth_status` | Serverversie, auth-modus, identiteit, tokenstatus |
 | `graph_request` | Elke Microsoft Graph call (paging, throttling-retry, v1.0/beta) |
 | `azure_request` | Elke Azure Resource Manager call |

@@ -3,6 +3,12 @@
 Alle noemenswaardige wijzigingen aan dit project worden hier bijgehouden.
 Het formaat volgt [Keep a Changelog](https://keepachangelog.com/) en het project gebruikt [semantische versienummers](https://semver.org/).
 
+## [0.4.0] - 2026-07-25
+
+### Toegevoegd
+- Interactief tenantbeheer via de chat: `environment_add` (verbind een nieuwe tenant, standaard via browserlogin zonder secrets), `environment_remove` (met bevestiging) en `environment_login` (identiteit controleren).
+- Omgevingen worden lokaal opgeslagen in `~/.microsoft-admin-mcp/environments.json` in het gebruikersprofiel, buiten het repository; tenantgegevens gaan dus nooit mee naar GitHub. Secrets bij voorkeur als `env:VARNAAM` verwijzing.
+
 ## [0.3.0] - 2026-07-25
 
 ### Toegevoegd

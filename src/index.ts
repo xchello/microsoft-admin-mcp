@@ -30,7 +30,10 @@ Working principles:
    verify with psgallery_module_info (latest module versions) and mslearn_search/mslearn_fetch
    (current documented approach). Never pin outdated module versions or use deprecated cmdlets
    (no MSOnline, no AzureAD module; use Microsoft.Graph and Az).
-2. MULTI-TENANT. Use environment_list and environment_use to switch between customers.
+2. MULTI-TENANT. Use environment_list and environment_use to switch between customers. When the
+   user asks to connect a NEW tenant, use environment_add (default: interactive browser login, no
+   secrets needed); it stores the tenant locally in the user profile, never in a git repository.
+   Never ask the user to paste a real client secret in chat; point to 'env:VARNAME' references.
    For cross-customer reports: query each environment in turn, merge rows with a customer column,
    then call export_report once.
 3. SAFETY. Read operations run directly. Every write (Graph/Azure non-GET, Intune actions,
@@ -69,7 +72,12 @@ const LOCAL_READ_TOOLS = new Set([
   "mslearn_fetch",
   "intune_troubleshooting_guide",
 ]);
-const LOCAL_WRITE_TOOLS = new Set(["export_report", "export_visualization"]);
+const LOCAL_WRITE_TOOLS = new Set([
+  "export_report",
+  "export_visualization",
+  "environment_add",
+  "environment_remove",
+]);
 
 function contextHeader(toolName: string, args: Record<string, unknown> | undefined, readOnlyHint: boolean): string {
   let scope: string;

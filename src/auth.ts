@@ -39,6 +39,17 @@ export function getActiveEnvironment(): Environment {
   return env;
 }
 
+/** Drop cached credential and tokens for an environment (after add/remove/change). */
+export function invalidateEnvironment(name: string): void {
+  credentials.delete(name);
+  for (const key of [...tokenCache.keys()]) {
+    if (key.startsWith(`${name}|`)) tokenCache.delete(key);
+  }
+  if (activeEnvName === name && !config.environments.some((e) => e.name === name)) {
+    activeEnvName = config.environments[0]?.name ?? "default";
+  }
+}
+
 export function setActiveEnvironment(name: string): Environment {
   const env = config.environments.find((e) => e.name.toLowerCase() === name.toLowerCase());
   if (!env) {
